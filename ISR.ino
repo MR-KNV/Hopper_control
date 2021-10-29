@@ -7,7 +7,7 @@
 //#define FQ        150.15// Хотим 3Гц. Чтобы синус был гладкий - предположим, что нужно знать значение синуса в 50 точках
 //3 Гц = 333 мс; 333/50 = 6,66 мс на одну точку( каждые 6.66 мс знаем значение синуса)
 // 1/6.66мс = 150,15 Гц - требуемая частота вызова прерывания
-#define FQ        3.0
+#define FQ        3.0 //Частота в ГЦ
 
 int analogPin = A0; // potentiometer wiper (middle terminal) connected to analog pin 0
                     // outside leads to ground and +5V
@@ -16,6 +16,7 @@ int pos = 512;
 int Position = 0;
 int flag = 0;
 int read_val[2] = {0, 0};
+int t = 0;
 
 char T_sig_buff[10];
 char T_sin_buff[10];
@@ -27,6 +28,8 @@ float myTimer = 0.0;
 float T_sig   = 0.0;   //333 мс
 float T_sin   = 0.0;   //6.66 мс
 float FQ_sin  = 0.0;   //150.15 Гц
+float k = 0.5;
+float newVal = 0.0;
 
 
 void setup(){
@@ -56,15 +59,13 @@ float* freq_comput(){
 void myFunc(float myTimer){
   ref = 30*sin(2*M_PI*myTimer*FQ)+float(pos);
   
-/* Для внешнего плоттера
-  //String DATA = "$" + String(ref) + " " + String(millis())+";";
-  //Serial.println(DATA); 
-*/  
-  //debug_plots() //Для отладки частот
   
-  print_plots();
- // Dynamixel.move(ID, ref);
-  flag = 0;
+  //debug_plots() //Для отладки частот
+  //if (millis()<5000) {
+    print_plots();
+   // Dynamixel.move(ID, ref);
+    flag = 0;
+   // }
   }
 
 int* read_func(){
@@ -74,13 +75,23 @@ int* read_func(){
   return p;
   }
 
+float expRunningAverage(float newVal) {
+  static float filVal = 0;
+  filVal += (newVal - filVal) * k;
+  return filVal;
+}
+
 void print_plots(){
   val = *(read_func()); 
   Position = *(read_func()+1);
+  newVal = expRunningAverage(val);
   Serial.print("*** Sensor position: ");
-  Serial.print(val);
+  Serial.print((newVal-255)/2);
+  //Serial.print("; ");
   Serial.print(" Dynamixel position: "); 
-  Serial.println(Position-280);
+  Serial.println((Position-280-230)/2);
+  //String DATA = "$" + String((val-320)/2.5) + " " + String((Position-190-320)/2.5) + " " + String(millis())+";";
+  //Serial.println(DATA); 
   }
 
 void debug_plots(){
